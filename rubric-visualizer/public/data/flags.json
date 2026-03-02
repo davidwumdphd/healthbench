@@ -1,0 +1,58 @@
+{
+    "worst": [
+        {
+            "prompt_id": "c968b43d-c6c0-420a-9139-8da36dfaf170",
+            "reason": "6 multi-dimensional rubrics, 1 very long (625 chars), multiple negative rubrics testing 4–6 things each"
+        },
+        {
+            "prompt_id": "30564618-20de-4427-a1bf-bf3c4b0f1941",
+            "reason": "3 rubrics over 530 chars each, all heavily multi-dimensional (4–6 ANDs), layered exercise/timing criteria"
+        },
+        {
+            "prompt_id": "9ba3e8d0-b58f-40fe-9a27-913175435c87",
+            "reason": "Multi-dimensional rubrics with 5+ ANDs on pelvic exam assessment, plus overlapping criteria"
+        },
+        {
+            "prompt_id": "61694938-13a8-4ee0-86cf-4bc3b7a60d4d",
+            "reason": "760-char rubric testing 6 things at once (drug names, dosing, timing, precautions), plus 542-char companion"
+        },
+        {
+            "prompt_id": "2b7f5235-8176-439f-a8fd-314d8d5f550b",
+            "reason": "Heavy multi-dimensional rubrics with vague high-weight criteria and overlapping pos/neg pairs"
+        },
+        {
+            "prompt_id": "122f0795-5f3f-43dd-8d69-a75253d03fb6",
+            "reason": "3 rubrics over 550 chars; #1 tests 5 independent EpiPen/allergy concepts in one binary judgment"
+        },
+        {
+            "prompt_id": "6a2c3cb2-9c23-445e-b384-5cd83feece02",
+            "reason": "Overlapping rubrics on screening tests, 515-char rubric with multiple test names and frequencies"
+        },
+        {
+            "prompt_id": "da05b57a-d776-45b6-96af-1750e0254eec",
+            "reason": "680-char rubric #5 overlaps with #14; vague criteria like 'seeks specific details' on +5 rubric"
+        },
+        {
+            "prompt_id": "9cff2a32-2cfa-4d6d-b0b2-0a2b14d60ef1",
+            "reason": "556-char and 539-char rubrics both multi-dimensional; cluster rubrics add 6000+ chars of noise"
+        },
+        {
+            "prompt_id": "c2393559-9e6c-44c3-bf08-bef69b356447",
+            "reason": "Vague −8 rubric with double negation, overlapping pos/neg on same content, plus ambiguous negative"
+        }
+    ],
+    "best": [
+        {
+            "prompt_id": "5c7d7fb4-b091-49b4-8290-4535b4a3122e",
+            "reason": "20 rubrics, avg 105 chars, all concise and single-dimensional — each tests exactly one thing"
+        },
+        {
+            "prompt_id": "ef4dc833-fc48-40b5-99e0-d3adea2e8f73",
+            "reason": "15 rubrics, avg 92 chars, crisp binary criteria like 'Offers a troubleshooting checklist' and clear negative like 'Advises submerging device in water'"
+        },
+        {
+            "prompt_id": "65e8928f-c10d-40d1-a215-600680f64e1e",
+            "reason": "20 rubrics, avg 127 chars, clear emergency triage criteria with unambiguous positive and negative checks"
+        }
+    ]
+}

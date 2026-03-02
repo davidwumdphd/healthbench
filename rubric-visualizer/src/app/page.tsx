@@ -29,15 +29,19 @@ interface Manifest {
   datasets: DatasetMeta[];
 }
 
+interface FlagEntry {
+  prompt_id: string;
+  reason: string;
+}
+
+interface Flags {
+  worst: FlagEntry[];
+  best: FlagEntry[];
+}
+
 const PER_PAGE = 25;
 
 /* ───────────── tag helpers ────────────────────────── */
-function tagCategory(tag: string) {
-  if (tag.startsWith("theme:")) return "theme";
-  if (tag.startsWith("physician_agreed_category:")) return "category";
-  return "other";
-}
-
 function tagLabel(tag: string) {
   return tag.replace(/^(theme:|physician_agreed_category:)/, "").replace(/_/g, " ");
 }
@@ -51,6 +55,7 @@ function parseExampleTags(tags: string[]) {
 /* ────────────────────── component ────────────────── */
 export default function HomePage() {
   const [manifest, setManifest] = useState<Manifest | null>(null);
+  const [flags, setFlags] = useState<Flags | null>(null);
   const [dataset, setDataset] = useState("healthbench_main");
   const [examples, setExamples] = useState<Example[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,14 +63,29 @@ export default function HomePage() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedThemes, setSelectedThemes] = useState<Set<string>>(new Set());
   const [selectedCategories, setSelectedCategories] = useState<Set<string>>(new Set());
+  const [flagFilter, setFlagFilter] = useState<"all" | "worst" | "best">("all");
   const [page, setPage] = useState(1);
 
-  // Load manifest on mount
+  // Load manifest + flags on mount
   useEffect(() => {
     fetch("/data/index.json")
       .then((r) => r.json())
       .then((m: Manifest) => setManifest(m));
+    fetch("/data/flags.json")
+      .then((r) => r.json())
+      .then((f: Flags) => setFlags(f));
   }, []);
+
+  // Build lookup maps from flags
+  const worstSet = useMemo(() => {
+    if (!flags) return new Map<string, string>();
+    return new Map(flags.worst.map((f) => [f.prompt_id, f.reason]));
+  }, [flags]);
+
+  const bestSet = useMemo(() => {
+    if (!flags) return new Map<string, string>();
+    return new Map(flags.best.map((f) => [f.prompt_id, f.reason]));
+  }, [flags]);
 
   // Load dataset when dataset changes
   useEffect(() => {
@@ -99,6 +119,9 @@ export default function HomePage() {
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
     return examples.filter((ex) => {
+      // Flag filter
+      if (flagFilter === "worst" && !worstSet.has(ex.prompt_id)) return false;
+      if (flagFilter === "best" && !bestSet.has(ex.prompt_id)) return false;
       // Text search
       if (q) {
         const promptText = ex.prompt.map((m) => m.content).join(" ").toLowerCase();
@@ -113,7 +136,7 @@ export default function HomePage() {
       }
       return true;
     });
-  }, [examples, search, selectedThemes, selectedCategories]);
+  }, [examples, search, selectedThemes, selectedCategories, flagFilter, worstSet, bestSet]);
 
   // Pagination
   const totalPages = Math.ceil(filtered.length / PER_PAGE);
@@ -135,6 +158,7 @@ export default function HomePage() {
     setSelectedThemes(new Set());
     setSelectedCategories(new Set());
     setSearch("");
+    setFlagFilter("all");
   }, [dataset]);
 
   // ─── Render ──────────────────────────
@@ -163,6 +187,28 @@ export default function HomePage() {
             <span className="tab-count">({ds.count.toLocaleString()})</span>
           </button>
         ))}
+      </div>
+
+      {/* Flag filter tabs */}
+      <div className="flag-tabs">
+        <button
+          className={`flag-tab ${flagFilter === "all" ? "active" : ""}`}
+          onClick={() => { setFlagFilter("all"); setPage(1); }}
+        >
+          All Questions
+        </button>
+        <button
+          className={`flag-tab flag-tab-worst ${flagFilter === "worst" ? "active" : ""}`}
+          onClick={() => { setFlagFilter("worst"); setPage(1); }}
+        >
+          Top 10 Worst Rubrics
+        </button>
+        <button
+          className={`flag-tab flag-tab-best ${flagFilter === "best" ? "active" : ""}`}
+          onClick={() => { setFlagFilter("best"); setPage(1); }}
+        >
+          Top 3 Best Rubrics
+        </button>
       </div>
 
       {/* Stats bar */}
@@ -194,7 +240,7 @@ export default function HomePage() {
       {/* Search & filter controls */}
       <div className="controls-row">
         <div className="search-wrapper">
-          <span className="search-icon">🔍</span>
+          <span className="search-icon">⌕</span>
           <input
             className="search-input"
             placeholder="Search prompts…"
@@ -209,7 +255,7 @@ export default function HomePage() {
           className={`filter-toggle ${showFilters ? "active" : ""}`}
           onClick={() => setShowFilters(!showFilters)}
         >
-          ⚙ Filters
+          Filters
           {(selectedThemes.size > 0 || selectedCategories.size > 0) && (
             <span className="badge badge-rubrics">
               {selectedThemes.size + selectedCategories.size}
@@ -260,7 +306,7 @@ export default function HomePage() {
         </div>
       ) : filtered.length === 0 ? (
         <div className="empty-state">
-          <div className="empty-state-icon">🔎</div>
+          <div className="empty-state-icon">No results</div>
           <h3>No matching questions</h3>
           <p>Try adjusting your search or filters.</p>
         </div>
@@ -277,15 +323,26 @@ export default function HomePage() {
                 .filter((r) => r.points < 0)
                 .reduce((s, r) => s + r.points, 0);
               const { themes, categories } = parseExampleTags(ex.example_tags);
+              const isWorst = worstSet.has(ex.prompt_id);
+              const isBest = bestSet.has(ex.prompt_id);
+              const flagReason = isWorst
+                ? worstSet.get(ex.prompt_id)
+                : isBest
+                  ? bestSet.get(ex.prompt_id)
+                  : null;
 
               return (
                 <Link
                   key={ex.prompt_id}
                   href={`/question/${ex.prompt_id}?dataset=${dataset}`}
-                  className="question-card"
+                  className={`question-card ${isWorst ? "card-worst" : ""} ${isBest ? "card-best" : ""}`}
                 >
                   <div className="question-card-header">
-                    <span className="question-number">#{idx + 1}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span className="question-number">#{idx + 1}</span>
+                      {isWorst && <span className="badge badge-worst">Unreliable Rubric</span>}
+                      {isBest && <span className="badge badge-best">Exemplary Rubric</span>}
+                    </div>
                     <div className="question-meta">
                       <span className="badge badge-rubrics">
                         {ex.rubrics.length} rubrics
@@ -302,6 +359,11 @@ export default function HomePage() {
                     </div>
                   </div>
                   <div className="question-prompt">{firstMsg}</div>
+                  {flagReason && (
+                    <div className={`flag-reason ${isWorst ? "flag-reason-worst" : "flag-reason-best"}`}>
+                      {flagReason}
+                    </div>
+                  )}
                   <div className="question-footer">
                     {themes.map((t) => (
                       <span key={t} className="tag-pill theme">

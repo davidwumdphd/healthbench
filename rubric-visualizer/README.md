@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HealthBench Rubric Visualizer
+
+An interactive Next.js application for exploring the [HealthBench](https://github.com/openai/healthbench) evaluation dataset — 5,000+ physician-authored medical questions with detailed grading rubrics.
+
+## Features
+
+- **Dataset browser** — Switch between Main (5,000), Hard (1,000), and Consensus (3,671) subsets
+- **Full-text search** across all prompts
+- **Tag-based filtering** by theme and physician-agreed category
+- **Question detail view** with conversation thread and rubric table (points, axes, tags)
+- **Rubric quality flags** — Top 10 worst and Top 3 best rubrics flagged with explanations
+- **Dark-mode design** with glassmorphism styling
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
+# Install dependencies
+npm install
+
+# Preprocess data (converts upstream JSONL to static JSON)
+node scripts/prepare-data.mjs
+
+# Run dev server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Data Pipeline
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The `scripts/prepare-data.mjs` script reads the upstream JSONL files from the parent directory:
 
-## Learn More
+- `healthbench_main.jsonl` → `public/data/healthbench_main.json`
+- `healthbench_hard.jsonl` → `public/data/healthbench_hard.json`
+- `healthbench_consensus.jsonl` → `public/data/healthbench_consensus.json`
 
-To learn more about Next.js, take a look at the following resources:
+It strips `canary` and `ideal_completions_data` fields to reduce file size, and generates a `public/data/index.json` manifest with dataset metadata (counts, available tags).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Rubric quality flags are stored in `public/data/flags.json`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+```
+rubric-visualizer/
+├── public/data/          # Static JSON data files (generated)
+├── scripts/
+│   └── prepare-data.mjs  # JSONL → JSON preprocessing
+├── src/app/
+│   ├── globals.css       # Design system and styles
+│   ├── layout.tsx        # Root layout with header
+│   ├── page.tsx          # Main page (search, filter, list)
+│   └── question/[id]/
+│       └── page.tsx      # Question detail page
+└── package.json
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploying to Vercel
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npx vercel
+```
+
+Or connect the repo to Vercel and set **Root Directory** to `rubric-visualizer`.
+
+The static data files in `public/data/` total ~50 MB, well within Vercel's 250 MB limit.
+
+## Tech Stack
+
+- **Next.js 16** (App Router, TypeScript)
+- **Custom CSS** (no Tailwind)
+- **Static JSON** (no database required)

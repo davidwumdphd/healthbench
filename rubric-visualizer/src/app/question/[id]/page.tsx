@@ -17,6 +17,16 @@ interface Example {
     example_tags: string[];
 }
 
+interface FlagEntry {
+    prompt_id: string;
+    reason: string;
+}
+
+interface Flags {
+    worst: FlagEntry[];
+    best: FlagEntry[];
+}
+
 function tagLabel(tag: string) {
     return tag
         .replace(/^(theme:|physician_agreed_category:|axis:|cluster:|level:)/, "")
@@ -38,6 +48,7 @@ export default function QuestionDetailPage() {
     const dataset = searchParams.get("dataset") || "healthbench_main";
 
     const [example, setExample] = useState<Example | null>(null);
+    const [flags, setFlags] = useState<Flags | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -48,7 +59,19 @@ export default function QuestionDetailPage() {
                 setExample(found || null);
                 setLoading(false);
             });
+        fetch("/data/flags.json")
+            .then((r) => r.json())
+            .then((f: Flags) => setFlags(f));
     }, [dataset, promptId]);
+
+    const flagInfo = useMemo(() => {
+        if (!flags || !example) return null;
+        const worst = flags.worst.find((f) => f.prompt_id === example.prompt_id);
+        if (worst) return { type: "worst" as const, reason: worst.reason };
+        const best = flags.best.find((f) => f.prompt_id === example.prompt_id);
+        if (best) return { type: "best" as const, reason: best.reason };
+        return null;
+    }, [flags, example]);
 
     const rubricStats = useMemo(() => {
         if (!example) return null;
@@ -88,7 +111,7 @@ export default function QuestionDetailPage() {
         return (
             <main className="main-container">
                 <div className="empty-state">
-                    <div className="empty-state-icon">❌</div>
+                    <div className="empty-state-icon">Not Found</div>
                     <h3>Question not found</h3>
                     <p>
                         No question with ID <code>{promptId}</code> in{" "}
@@ -108,6 +131,19 @@ export default function QuestionDetailPage() {
                 ← Back to all questions
             </Link>
 
+            {/* Flag banner */}
+            {flagInfo && (
+                <div className={`flag-banner ${flagInfo.type === "worst" ? "flag-banner-worst" : "flag-banner-best"}`}>
+                    <span className="flag-banner-icon">{flagInfo.type === "worst" ? "▲" : "★"}</span>
+                    <div>
+                        <div className="flag-banner-label">
+                            {flagInfo.type === "worst" ? "Flagged: Unreliable Rubric (Top 10 Worst)" : "Flagged: Exemplary Rubric (Top 3 Best)"}
+                        </div>
+                        {flagInfo.reason}
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <div className="detail-header">
                 <div className="detail-title">Question</div>
@@ -123,7 +159,7 @@ export default function QuestionDetailPage() {
 
             {/* Conversation */}
             <h2 className="section-title">
-                💬 Conversation
+                Conversation
                 {example.prompt.length > 1 && (
                     <span className="badge badge-turns">
                         {Math.ceil(example.prompt.length / 2)} turns
@@ -144,7 +180,7 @@ export default function QuestionDetailPage() {
             </div>
 
             {/* Rubric stats */}
-            <h2 className="section-title">📋 Rubric Items</h2>
+            <h2 className="section-title">Rubric Items</h2>
             {rubricStats && (
                 <div className="rubric-summary">
                     <div className="rubric-stat">

@@ -18,7 +18,6 @@ export default function RootLayout({
         <header className="header">
           <div className="header-inner">
             <a href="/" className="logo">
-              <div className="logo-icon">🏥</div>
               HealthBench <span>Rubric Visualizer</span>
             </a>
           </div>
